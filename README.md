@@ -45,8 +45,8 @@ The intermediate results are cached in the following paths:
 
 ```
 ./tokens/        --- tokenized sequences for node label, node des. and graph des
-./embeddings/    --- [graph_des_embeddings, node_label_embeddings, node_des_embeddings] encoded by PLM
-./result/ 			    --- generated descriptions for test graphs
+./embeddings/    --- [graph_des_embeddings, node_label_embeddings, node_des_embeddings] encoded by PLMs
+./result/        --- generated descriptions for test graphs
 ```
 
 
