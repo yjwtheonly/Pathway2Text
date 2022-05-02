@@ -19,13 +19,13 @@ Please cite our paper if you use this code.
  - For Graph2Text ：
 
 ```
- python graphtranswithdes.py --node-feat='labeldes' --used-part='graphdes'
+  python graphtranswithdes.py --node-feat='labeldes' --used-part='graphdes'
 ```
 
  - For Text2Graph node classification:
 
 ```
-python nodeclassification.py --chosen-class='SIMPLE_CHEMICAL' --use-graph-des
+  python nodeclassification.py --chosen-class='SIMPLE_CHEMICAL' --use-graph-des
 ```
 
 Set ```--chosen-class='SIMPLE_CHEMICAL', 'MACROMOLECULE_MULTIMER' or 'MACROMOLECULE'``` for applying experiments on nodes of different type.
@@ -33,7 +33,7 @@ Set ```--chosen-class='SIMPLE_CHEMICAL', 'MACROMOLECULE_MULTIMER' or 'MACROMOLEC
  - For Text2Graph link prediction:
 
 ```
-python linkprediction.py --use-graph-des
+  python linkprediction.py --use-graph-des
 ```
 
 
@@ -41,9 +41,9 @@ python linkprediction.py --use-graph-des
 The intermediate results are cached in the following paths:
 
 ```
-./tokens/        --- tokenized sequences for node label, node des. and graph des
-./embeddings/    --- [graph_des_embeddings, node_label_embeddings, node_des_embeddings] encoded by PLMs
-./result/        --- generated descriptions for test graphs
+  ./tokens/        --- tokenized sequences for node label, node des. and graph des
+  ./embeddings/    --- [graph_des_embeddings, node_label_embeddings, node_des_embeddings] encoded by PLMs
+  ./result/        --- generated descriptions for test graphs
 ```
 
 
