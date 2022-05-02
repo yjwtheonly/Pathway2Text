@@ -768,7 +768,7 @@ T_test = []
 T_L_test = []
 np.random.seed(args.seed)
 
-for times in range(25):
+for times in range(1):
     print('*'*30, times)
     np.random.shuffle(data_list)
     trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=1)
