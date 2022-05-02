@@ -12,7 +12,7 @@ Please cite our paper if you use this code.
 
 - **Download dataset:** Our Pathway2Text dataset is released at https://zenodo.org/record/6510039#%23.Ym9F15NBz0o. Download ```mapping_database_to_pathway2text.json``` and ```pathway2text.json```,  put them in ```./finaldata/```.
 
-- **Download parameters:** Our model with best performance is available  at . Download and put all the parameters in ```./params/```.
+- **Download parameters:** Our model with best performance is available at https://drive.google.com/file/d/1j6EhJuVvOLEISNOEqLedXiZXOmiKFbv8/view?usp=sharing. Download and put all the parameters in ```./params/```.
 
 - **Reproduce results:**
 
