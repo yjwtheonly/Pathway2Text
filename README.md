@@ -33,7 +33,7 @@ Set ```--chosen-class='SIMPLE_CHEMICAL', 'MACROMOLECULE_MULTIMER' or 'MACROMOLEC
  - For Text2Graph link prediction:
 
 ```
-  python linkprediction.py --use-graph-des
+  python linkprediction.py --use-graph-des --multiedge
 ```
 
 
