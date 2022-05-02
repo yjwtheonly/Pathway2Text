@@ -6,7 +6,7 @@ This is the implementation of our NAACL 2022 paper:
 
 Junwei Yang, Zequn Liu, Ming Zhang* and Sheng Wang*
 
-https://openreview.net/pdf?id=NZ-yd023Fey
+https://openreview.net/pdf?id=SLQlZl3bHbc
 
 Please cite our paper if you use this code.
 
