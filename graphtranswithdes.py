@@ -116,7 +116,7 @@ class GCN(nn.Module):
 
         self.args = args
         if(additional_head):
-            self.additional_head = Sequential(Linear(args.x_dim*2 if args.node_feat == 'labeldes' else args.x_dim, args.x_dim), ReLU())
+            self.additional_head = Sequential(Linear(args.x_dim*2, args.x_dim), ReLU())
 
         self.output_layer = Sequential( Linear(args.graph_emb_dim*args.num_layers, args.graph_emb_dim), 
                                         ReLU(), 
@@ -140,12 +140,8 @@ class GCN(nn.Module):
 
         x, edge_index, batch = data.x, data.edge_index, data.batch
         
-        if(self.args.node_feat == 'labeldes'):
-            old_x = x[:,0,:]
-            x = x.view(x.shape[0], -1)
-        else:
-            old_x = x
-            # x = x[:,0,:]
+        old_x = x[:,0,:]
+        x = x.view(x.shape[0], -1)
         if(self.additional_head):
             x = self.additional_head(x)
         # if(self.args.node_feat == 'labeldes'):
@@ -170,7 +166,7 @@ class GAT(nn.Module):
         self.args = args
         self.num_layers = args.num_layers
         if(additional_head):
-            self.additional_head = Sequential(Linear(args.x_dim*2 if args.node_feat == 'labeldes' else args.x_dim, args.x_dim), ReLU())
+            self.additional_head = Sequential(Linear(args.x_dim*2, args.x_dim), ReLU())
         
         # self.output_layer = Sequential( Linear(args.graph_emb_dim*args.num_layers, 768), 
         #                                 GELU())
@@ -196,12 +192,8 @@ class GAT(nn.Module):
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
         
-        if(self.args.node_feat == 'labeldes'):
-            old_x = x[:,0,:]
-            x = x.view(x.shape[0], -1)
-        else:
-            old_x = x
-            # x = x[:,0,:]
+        old_x = x[:,0,:]
+        x = x.view(x.shape[0], -1)
         if(self.additional_head):
             x = self.additional_head(x)
 
@@ -223,7 +215,7 @@ class MLP(nn.Module):
         self.num_layers = args.num_layers
         self.args = args
         if(additional_head):
-            self.additional_head = Sequential(Linear(args.x_dim*2 if args.node_feat == 'labeldes' else args.x_dim, args.x_dim), ReLU())
+            self.additional_head = Sequential(Linear(args.x_dim*2, args.x_dim), ReLU())
 
         self.init_emb()
 
@@ -237,12 +229,8 @@ class MLP(nn.Module):
         
         x, edge_index, batch = data.x, data.edge_index, data.batch
         
-        if(self.args.node_feat == 'labeldes'):
-            old_x = x[:,0,:]
-            x = x.view(x.shape[0], -1)
-        else:
-            old_x = x
-            # x = x[:,0,:]
+        old_x = x[:,0,:]
+        x = x.view(x.shape[0], -1)
         if(self.additional_head):
             x = self.additional_head(x)
     
@@ -258,7 +246,7 @@ class GIN(nn.Module):
         self.num_layers = args.num_layers
         # self.node_classifier = nn.Linear(args.graph_emb_dim*args.num_layers, args.x_dim)
         if(additional_head):
-            self.additional_head = Sequential(Linear(args.x_dim*2 if args.node_feat == 'labeldes' else args.x_dim, args.x_dim), ReLU())
+            self.additional_head = Sequential(Linear(args.x_dim*2, args.x_dim), ReLU())
         self.convs = ModuleList()
         self.bns = ModuleList()
         self.activation = ShiftSoftplus()
@@ -288,25 +276,13 @@ class GIN(nn.Module):
 
     def forward(self, data):
         
-        # x, edge_index, batch, edge_attr = data.x, data.edge_index, data.batch, data.edge_attr
-        # mask = torch.randint(0,edge_index.shape[1],[int(self.mask_ratio*batch.shape[0])])
-
-        # src_ids = edge_index[0]
-        # src_ids = torch.Tensor([src_ids[i] for i in mask]).long().squeeze()
 
         x, edge_index, batch = data.x, data.edge_index, data.batch
-        if(self.args.node_feat == 'labeldes'):
-            old_x = x[:,0,:]
-            x = x.view(x.shape[0], -1)
-        else:
-            old_x = x
-            # x = x[:,0,:]
+        
+        old_x = x[:,0,:]
+        x = x.view(x.shape[0], -1)
         if(self.additional_head):
             x = self.additional_head(x)
-        # if(self.args.node_feat == 'labeldes'):
-        #     x = torch.mean(x, 1)
-        # std = x[src_ids]
-        # x[src_ids] = 0
         
         xs = []
         for i in range(self.num_layers):
@@ -317,9 +293,6 @@ class GIN(nn.Module):
         node_emb = self.dense_layer(node_emb)
         act_node = self.activation(node_emb)
         
-        # xpool = global_mean_pool(act_node, batch)
-
-        # node_preds = self.node_classifier(act_node[src_ids])
         embeddings_n = self.projection_layer(act_node)
         embeddings_g = global_mean_pool(embeddings_n, batch)
         embeddings_n = embeddings_n + old_x
@@ -442,11 +415,8 @@ class GraphTransformer(nn.Module):
             self.transformer = getTransformer(args, position='None', ignore_encoder=False)
         self.graphAttlayer = None
         self.desAttlayer = None
-        if 'des' in args.used_part:
-            if 'graph' in args.used_part:
-                self.graphAttlayer = AttentionModule(args)
-            if 'des' in args.used_part:
-                self.desAttlayer = Sequential(Linear(768,768), nn.LayerNorm(768), nn.LeakyReLU(negative_slope=0.4))
+        self.graphAttlayer = AttentionModule(args)
+        self.desAttlayer = Sequential(Linear(768,768), nn.LayerNorm(768), nn.LeakyReLU(negative_slope=0.4))
                 # self.desAttlayer = AttentionModule(args)
         self.init_emb()
 
@@ -1047,7 +1017,7 @@ def Train_for_epoch(model, lr, weight_decay, epochs, single = False):
         print("="*15,'epoch:',epoch,'='*15)
 
         train_loss = Train(trainData, model, optimizer, device, single)
-        loss = Val(testData, model, device, single)
+        loss = Val(valData, model, device, single)
         print('trainloss:', train_loss, 'valloss:', loss)
         if(loss < best_loss):
             best_loss = loss
@@ -1159,7 +1129,9 @@ else:
 print(args)
 
 bound  = int(len(data_list) * 0.75)
-trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=args.batch_size)
+v_bound = int(bound * 0.8)
+trainData = DataLoader(data_list[:v_bound], shuffle=True, batch_size=args.batch_size)
+valData = DataLoader(data_list[v_bound:bound], shuffle=True, batch_size=args.batch_size)
 testData = DataLoader(data_list[bound:], shuffle = False, batch_size=args.batch_size)
 
 if args.model == 'Text2text':
