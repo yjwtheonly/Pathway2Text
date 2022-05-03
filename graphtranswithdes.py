@@ -1147,128 +1147,58 @@ result_path = os.path.join('result', check_name)
 data_list_path = os.path.join('datalist', check_name)
 print('\n\n\n\n','check name:',check_name,'\n\n\n')
 print('GPU num:', torch.cuda.device_count())
-#%%
-if args.mode == 'train':
-# if (torch.cuda.device_count()>1):
-#      model = nn.DataParallel(model)
-    if(args.model == 'GraphTransformer'):
-        print('*'*10+'warming up...'+'*'*10)
-        if('des' in args.used_part):
-            for p in model.transformer.encoder.parameters():
-                p.requires_grad = False
-            for p in model.transformer.decoder.parameters():
-                p.requires_grad = True
-            if torch.cuda.device_count()>1:
-                model.transformer = nn.DataParallel(model.transformer)
-            model.to(device)
-            Train_for_epoch(model, lr = args.lr, weight_decay = args.weight_decay, epochs=2, single = True)
-            
-            data_list, NN = findKNN(data_list, bound, model, device)
-            with open(data_list_path, 'wb') as fl:
-                dill.dump([data_list,NN], fl)
-            # raise Exception
-            # with open(data_list_path, 'rb') as fl:
-            #     data_list, NN = dill.load(fl)
-            trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=args.batch_size)
-            testData = DataLoader(data_list[bound:], shuffle = False, batch_size=args.batch_size)
-    
-    model = GraphTransformer(args)
-    for p in model.transformer.encoder.parameters():
-        p.requires_grad = False
-    for p in model.transformer.decoder.parameters():
-        p.requires_grad = True
-    if torch.cuda.device_count()>1:
-        model.transformer = nn.DataParallel(model.transformer)
-    model.to(device)
-    Train_for_epoch(model, lr = args.lr, weight_decay = args.weight_decay, epochs=args.epochs)
-   
-    model = GraphTransformer(args)
-    params = torch.load(model_params_path)
-    model.load_state_dict(params)
-    model.to(device)
-    testData = DataLoader(data_list[bound:], shuffle = False, batch_size=2)
-    print('loss:', Val(testData,model, device))
-    ret,std = Test(testData, model, device)
 
-    token_gen = []
-    token_std = []
-    print('converting tokens to strings')
-    bo = True
-    for batch, batch_std in tqdm(list(zip(ret,std))):
-        for i in range(len(batch)):
-            token_gen.append(tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(filter_for_bos_eos(batch[i], args.bos_token_id, args.eos_token_id)))) 
-            if(bo):
-                print(tokenizer.convert_ids_to_tokens(batch[i]))
-                print(token_gen)
-                bo = False
-            token_std.append([tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(filter_for_bos_eos(batch_std[i], args.bos_token_id, args.eos_token_id)))])
-    with open(result_path, 'wb') as fl:
-        pkl.dump([token_gen, token_std], fl)
-    print(len(set(token_gen)))
-    token_std = [[x.split()] for xLi in token_std for x in xLi]
-    token_gen = [x.split() for x in token_gen]
-    find_best_case(token_std, token_gen)
-    print(token_gen[0])
-    print('*', token_std[0])
-    print(corpus_bleu(token_std, token_gen, weights=(1,)), 
-            corpus_bleu(token_std, token_gen, weights=(0,1)), 
-            corpus_bleu(token_std, token_gen, weights=(0,0,1)),
-            corpus_bleu(token_std, token_gen, weights=(0,0,0,1)),
-            corpus_bleu(token_std, token_gen, weights=(0.25,0.25,0.25,0.25)))
-    
-elif(args.mode == 'test'):
+params = torch.load(model_params_path+'_single')
+model.load_state_dict(params)
+model.to(device)
+data_list, NN = findKNN(data_list, bound, model, device)
+trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=args.batch_size)
+testData = DataLoader(data_list[bound:], shuffle = False, batch_size=args.batch_size)
 
-    params = torch.load(model_params_path+'_single')
-    model.load_state_dict(params)
-    model.to(device)
-    data_list, NN = findKNN(data_list, bound, model, device)
-    trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=args.batch_size)
-    testData = DataLoader(data_list[bound:], shuffle = False, batch_size=args.batch_size)
-   
-    model = GraphTransformer(args)
-    params = torch.load(model_params_path)
-    model.load_state_dict(params)
-    model.to(device)
-    print('loss:', Val(testData,model, device))
-    ret,std = Test(testData, model, device)
+model = GraphTransformer(args)
+params = torch.load(model_params_path)
+model.load_state_dict(params)
+model.to(device)
+print('loss:', Val(testData,model, device))
+ret,std = Test(testData, model, device)
 
-    token_gen = []
-    token_std = []
-    print('converting tokens to strings')
-    if(tokenizer.bos_token_id is not None):
-        bos = tokenizer.bos_token
-    if(tokenizer.eos_token_id is not None):
-        eos = tokenizer.eos_token
-    bo = True
-    for batch, batch_std in tqdm(list(zip(ret,std))):
-        for i in range(len(batch)):
-            token_gen.append(tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(filter_for_bos_eos(batch[i], args.bos_token_id, args.eos_token_id)))) 
-            if(bo):
-                # print(tokenizer.convert_ids_to_tokens(batch[i]))
-                # print(token_gen)
-                bo = False
-            token_std.append([tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(filter_for_bos_eos(batch_std[i], args.bos_token_id, args.eos_token_id)))])
-    print(len(set(token_gen)))
-    bo = True
-    meteor_list = []
-    from rouge_score import rouge_scorer
-    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-    rougeL_list = []
-    for xLi, x in zip(token_std, token_gen):
-        if bo:
+token_gen = []
+token_std = []
+print('converting tokens to strings')
+if(tokenizer.bos_token_id is not None):
+    bos = tokenizer.bos_token
+if(tokenizer.eos_token_id is not None):
+    eos = tokenizer.eos_token
+bo = True
+for batch, batch_std in tqdm(list(zip(ret,std))):
+    for i in range(len(batch)):
+        token_gen.append(tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(filter_for_bos_eos(batch[i], args.bos_token_id, args.eos_token_id)))) 
+        if(bo):
+            # print(tokenizer.convert_ids_to_tokens(batch[i]))
+            # print(token_gen)
             bo = False
-            print('check meteor_score ...')
-        meteor_list.append(meteor_score(xLi, x))
-        scores = scorer.score(xLi[0], x)
-        rougeL_list.append(scores['rougeL'][1])
-    print('meteor_score:', np.mean(np.asarray(meteor_list)))
-    print('rougeL:', np.mean(np.asarray(rougeL_list)))
-    
-    token_std = [[x.split()] for xLi in token_std for x in xLi]
-    token_gen = [x.split() for x in token_gen]
-    print('nist score:', corpus_nist(token_std, token_gen, n = 3))
-    print(corpus_bleu(token_std, token_gen, weights=(1,)), 
-            corpus_bleu(token_std, token_gen, weights=(0,1)), 
-            corpus_bleu(token_std, token_gen, weights=(0,0,1)),
-            corpus_bleu(token_std, token_gen, weights=(0,0,0,1)),
-            corpus_bleu(token_std, token_gen, weights=(0.25,0.25,0.25,0.25)))
+        token_std.append([tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(filter_for_bos_eos(batch_std[i], args.bos_token_id, args.eos_token_id)))])
+print(len(set(token_gen)))
+bo = True
+meteor_list = []
+from rouge_score import rouge_scorer
+scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+rougeL_list = []
+for xLi, x in zip(token_std, token_gen):
+    if bo:
+        bo = False
+        print('check meteor_score ...')
+    meteor_list.append(meteor_score(xLi, x))
+    scores = scorer.score(xLi[0], x)
+    rougeL_list.append(scores['rougeL'][1])
+print('meteor_score:', np.mean(np.asarray(meteor_list)))
+print('rougeL:', np.mean(np.asarray(rougeL_list)))
+
+token_std = [[x.split()] for xLi in token_std for x in xLi]
+token_gen = [x.split() for x in token_gen]
+print('nist score:', corpus_nist(token_std, token_gen, n = 3))
+print(corpus_bleu(token_std, token_gen, weights=(1,)), 
+        corpus_bleu(token_std, token_gen, weights=(0,1)), 
+        corpus_bleu(token_std, token_gen, weights=(0,0,1)),
+        corpus_bleu(token_std, token_gen, weights=(0,0,0,1)),
+        corpus_bleu(token_std, token_gen, weights=(0.25,0.25,0.25,0.25)))
