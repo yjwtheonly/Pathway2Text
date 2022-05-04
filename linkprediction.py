@@ -360,16 +360,6 @@ def Val(Iter, model, device):
     
     model.eval()
     F1, loss, acc = v_val(Iter, model, device)
-    # acc_list = [acc]
-    # print(loss, type(loss))
-    # for _ in range(4):
-    #     fF1, floss, facc = v_val(Iter, model, device)
-    #     acc_list.append(facc)
-    #     loss += floss
-    #     acc += facc
-    #     F1 = np.asarray(F1) + np.asarray(fF1)
-    print('F1 score:', F1)
-    # print(acc_list)
     return F1, loss, acc
 #%%
 class DSU(object):
@@ -851,8 +841,7 @@ print(ppList)
 T_test = []
 T_L_test = []
 np.random.seed(args.seed)
-for times in range(1):
-    print('*'*30, times)
+if args.mode=='test':
     np.random.shuffle(data_list)
     device = torch.device('cuda')
     args.x_dim = data_list[0].x.shape[1]
@@ -860,7 +849,6 @@ for times in range(1):
     bound  = int(len(data_list) * args.train_ratio)
     trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=args.batch_size)
     valData = DataLoader(data_list[bound:], shuffle = False, batch_size=args.batch_size)
-#%%
     check_name = '_'.join(['seed'+str(args.seed),args.graph_position, 
                         args.node_encoder.replace('/', ''), 
                         args.decoder_model_name.replace('/',''), 
@@ -873,37 +861,64 @@ for times in range(1):
     print('\n\n\n\n','check name:',check_name,'\n\n\n')
     model = LinkPrediction(args)
     model.to(device)
-    parameters = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(parameters, lr=args.lr, weight_decay = args.weight_decay)
 
-    best_acc = 0
-    bestF1 = None
-    for epoch in range(args.epochs):
+    params = torch.load(model_params_path)
+    model.load_state_dict(params)
+    F1, loss, acc = Val(valData, model, device)
+    print('acc:', acc)
+else:
+    for times in range(1):
+        print('*'*30, times)
+        np.random.shuffle(data_list)
+        device = torch.device('cuda')
+        args.x_dim = data_list[0].x.shape[1]
+        print(args)
+        bound  = int(len(data_list) * args.train_ratio)
+        trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=args.batch_size)
+        valData = DataLoader(data_list[bound:], shuffle = False, batch_size=args.batch_size)
+        check_name = '_'.join(['seed'+str(args.seed),args.graph_position, 
+                            args.node_encoder.replace('/', ''), 
+                            args.decoder_model_name.replace('/',''), 
+                            args.label_sentence_num,
+                            args.graph_encoder,
+                            'forLP','usedes='+str(args.use_graph_des), 'multi='+str(args.multiedge),
+                            'usemethod='+args.use_method, 'node_feat='+args.node_feat])
+        model_params_path = os.path.join('params', check_name)
+        result_path = os.path.join('result', check_name)
+        print('\n\n\n\n','check name:',check_name,'\n\n\n')
+        model = LinkPrediction(args)
+        model.to(device)
+        parameters = [p for p in model.parameters() if p.requires_grad]
+        optimizer = torch.optim.Adam(parameters, lr=args.lr, weight_decay = args.weight_decay)
 
-        print("="*15,'epoch:',epoch,'='*15)
+        best_acc = 0
+        bestF1 = None
+        for epoch in range(args.epochs):
 
-        train_loss = Train(trainData, model, optimizer, device)
-        F1, loss, acc = Val(valData, model, device)
-        print('trainloss:', train_loss, 'valloss:', loss, 'valacc:', acc)
-        if bestF1 is None:
-            bestF1 = F1
-        for i,a in enumerate(F1):
-            if(a > bestF1[i]):
-                bestF1[i] = a
-        if(acc > best_acc):
-            best_acc = acc
-            params = model.state_dict()
-            torch.save(params, model_params_path)
-    ppList = list(ppList)
-    nList = ['noarc'] + ppList
-    goalList = ['CATALYSIS','STIMULATION','LOGIC_ARC','INHIBITION','CONSUMPTION','PRODUCTION', 'BELONG_TO']
-    finall = [best_acc, bestF1[0]]
-    tmpdict = dict(list(zip(nList, bestF1)))
-    for x in goalList:
-        finall.append(tmpdict[x])
-    print(finall)
-    T_test.append(finall)
-print(T_test)
-AA = [T[0] for T in T_test]
-AA = np.asarray(AA)
-print('mean acc:', np.mean(AA))
+            print("="*15,'epoch:',epoch,'='*15)
+
+            train_loss = Train(trainData, model, optimizer, device)
+            F1, loss, acc = Val(valData, model, device)
+            print('trainloss:', train_loss, 'valloss:', loss, 'valacc:', acc)
+            if bestF1 is None:
+                bestF1 = F1
+            for i,a in enumerate(F1):
+                if(a > bestF1[i]):
+                    bestF1[i] = a
+            if(acc > best_acc):
+                best_acc = acc
+                params = model.state_dict()
+                torch.save(params, model_params_path)
+        ppList = list(ppList)
+        nList = ['noarc'] + ppList
+        goalList = ['CATALYSIS','STIMULATION','LOGIC_ARC','INHIBITION','CONSUMPTION','PRODUCTION', 'BELONG_TO']
+        finall = [best_acc, bestF1[0]]
+        tmpdict = dict(list(zip(nList, bestF1)))
+        for x in goalList:
+            finall.append(tmpdict[x])
+        print(finall)
+        T_test.append(finall)
+    print(T_test)
+    AA = [T[0] for T in T_test]
+    AA = np.asarray(AA)
+    print('mean acc:', np.mean(AA))

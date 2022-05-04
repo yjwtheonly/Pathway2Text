@@ -729,6 +729,7 @@ data_list = getDatalist(args.seed, data, dicS = dicS, label_num = args.label_sen
                         node_encoder = args.node_encoder, 
                         max_tokens = args.max_tokens)
 print(len(data_list))
+np.random.shuffle(data_list)
 #%%
 device = torch.device('cuda')
 tokenizer = AutoTokenizer.from_pretrained(args.decoder_model_name, use_fast = False)
@@ -760,41 +761,52 @@ check_name = '_'.join(['seed'+str(args.seed),args.graph_position,
                      args.graph_encoder,
                      'forNodeClass','usedes='+str(args.use_graph_des),
                      'usemethod='+args.use_method, 'node_feat='+args.node_feat])
-model_params_path = os.path.join('params', check_name)
+model_params_path = os.path.join('params', check_name+args.chosen_class)
 result_path = os.path.join('result', check_name)
 print('\n\n\n\n','check name:',check_name,'\n\n\n')
 print('GPU num:', torch.cuda.device_count())
-T_test = []
-T_L_test = []
 np.random.seed(args.seed)
-
-for times in range(1):
-    print('*'*30, times)
-    np.random.shuffle(data_list)
+np.random.shuffle(data_list)
+if args.mode == 'test':
     trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=1)
     valData = DataLoader(data_list[bound:], shuffle = False, batch_size=1)
-
+    np.random.shuffle(data_list)
     model = NodeClassification(args)
     model.to(device)
-    parameters = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(parameters, lr=args.lr, weight_decay = args.weight_decay)
+    params  = torch.load(model_params_path)
+    model.load_state_dict(params)
+    loss, acc, acc_list = Val(valData, model, device)
+    print('acc:', acc)
+else:
+    T_test = []
+    T_L_test = []
+    for times in range(1):
+        print('*'*30, times)
+        np.random.shuffle(data_list)
+        trainData = DataLoader(data_list[:bound], shuffle=True, batch_size=1)
+        valData = DataLoader(data_list[bound:], shuffle = False, batch_size=1)
 
-    best_acc = 0
-    best_list = None
-    for epoch in range(args.epochs):
+        model = NodeClassification(args)
+        model.to(device)
+        parameters = [p for p in model.parameters() if p.requires_grad]
+        optimizer = torch.optim.Adam(parameters, lr=args.lr, weight_decay = args.weight_decay)
 
-        print("="*15,'epoch:',epoch,'='*15)
+        best_acc = 0
+        best_list = None
+        for epoch in range(args.epochs):
 
-        train_loss = Train(trainData, model, optimizer, device)
-        loss, acc, acc_list = Val(valData, model, device)
-        print('trainloss:', train_loss, 'valloss:', loss, 'valacc:', acc)
-        if(acc > best_acc):
-            best_acc = acc
-            best_list = acc_list
-            params = model.state_dict()
-            torch.save(params, model_params_path)
-    print('best acc:', best_acc)
-    T_test.append(best_acc)
-    print(best_list)
-    T_L_test += best_list
-print('T_test:', T_test)
+            print("="*15,'epoch:',epoch,'='*15)
+
+            train_loss = Train(trainData, model, optimizer, device)
+            loss, acc, acc_list = Val(valData, model, device)
+            print('trainloss:', train_loss, 'valloss:', loss, 'valacc:', acc)
+            if(acc > best_acc):
+                best_acc = acc
+                best_list = acc_list
+                params = model.state_dict()
+                torch.save(params, model_params_path)
+        print('best acc:', best_acc)
+        T_test.append(best_acc)
+        print(best_list)
+        T_L_test += best_list
+    print('T_test:', T_test)

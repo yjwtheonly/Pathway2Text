@@ -157,7 +157,6 @@ class GCN(nn.Module):
             embeddings_n = embeddings_n + old_x
         embeddings_n,mask = graph_flatten(batch, embeddings_n)
         return embeddings_g.unsqueeze(1), embeddings_n, mask
-
 class GAT(nn.Module):
 
     def __init__(self, args, additional_head = False):
@@ -166,7 +165,7 @@ class GAT(nn.Module):
         self.args = args
         self.num_layers = args.num_layers
         if(additional_head):
-            self.additional_head = Sequential(Linear(args.x_dim*2, args.x_dim), ReLU())
+            self.additional_head = Sequential(Linear(args.x_dim*2 if args.node_feat == 'labeldes' else args.x_dim, args.x_dim), ReLU())
         
         # self.output_layer = Sequential( Linear(args.graph_emb_dim*args.num_layers, 768), 
         #                                 GELU())
@@ -207,7 +206,7 @@ class GAT(nn.Module):
         embeddings_n = embeddings_n + old_x
         embeddings_n,mask = graph_flatten(batch, embeddings_n)
         return embeddings_g.unsqueeze(1), embeddings_n, mask
-
+        
 class MLP(nn.Module):
 
     def __init__(self, args, additional_head = False):
@@ -716,9 +715,6 @@ def get_sentence_embedding_from_LM(model, ids, mask, full=''):
         raise Exception('wrong use method')
     return list((torch.cat(retList, 0)).numpy())
 #%%
-# a = [(1,2), (3,4), (5,6)]
-# print(list(zip(*a)))
-#%%
 
 def get_graph_input_embeddings(seed, label_num, data, graph_list, graph_des_list, en_label, label, each_node_des, each_node_label, 
                                 des_bound_list=None, des_id_list=None, des_des_list = None,
@@ -1100,8 +1096,6 @@ data_list = getDatalist(args.seed, data, dicS = dicS, label_num = args.label_sen
 print('num of graphs:', len(data_list))
 np.random.seed(args.seed)
 np.random.shuffle(data_list)
-# print(data_list[0].labels)
-# print(data_list[0].x)
 #%%
 device = torch.device('cuda')
 tokenizer = AutoTokenizer.from_pretrained(args.decoder_model_name, use_fast = False)
@@ -1147,7 +1141,7 @@ result_path = os.path.join('result', check_name)
 data_list_path = os.path.join('datalist', check_name)
 print('\n\n\n\n','check name:',check_name,'\n\n\n')
 print('GPU num:', torch.cuda.device_count())
-
+#%%
 params = torch.load(model_params_path+'_single')
 model.load_state_dict(params)
 model.to(device)
