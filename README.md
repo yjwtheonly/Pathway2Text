@@ -16,7 +16,7 @@ Our Pathway2Text dataset is released at https://zenodo.org/record/6510039#%23.Ym
 
 ### Download parameters: 
 
-Our model with best performance is available at https://drive.google.com/file/d/1j6EhJuVvOLEISNOEqLedXiZXOmiKFbv8/view?usp=sharing. Download and put all the parameters in ```./params/```.
+Our model with best performance is available at https://drive.google.com/file/d/1Whn9oZ0hIfOly0lIOBEPVafMn_CxSaly/view?usp=sharing. Download and put all the parameters in ```./params/```.
 
 ### Reproduce results:
 
